@@ -1,0 +1,16 @@
+{
+  "name": "food-delivery-app",
+  "version": "1.0.0",
+  "description": "This repo contains the basic food delivery feature including following key points : \r 1. List the menu with items\r 2. Place an order\r 3. Update the status of the order",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "dev": "nodemon index.js"
+  },
+   "workspaces": [
+    "apps/*"
+  ],
+  "keywords": [],
+  "author": "",
+  "license": "ISC"
+}

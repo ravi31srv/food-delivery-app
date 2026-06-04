@@ -1,33 +1,32 @@
+import "reflect-metadata";
+
 import express from "express";
 import cors from "cors";
-// import dotenv from "dotenv";
-import { env } from "./config/env.js";
 import { connectDB } from "./config/db.js";
-import menuItemRouter from './routes/menuItems.routes.js'
-import orderRouter from './routes/orders.routes.js'
+import menuItemRouter from './routes/menuItem.routes.js'
+import orderRouter from './routes/order.routes.js'
+import { seedDatabase } from "./seeds/menuItemSeeder.js";
 
-const app = express();
+export const app = express();
 
-app.use(cors());
+app.use(cors({ origin: "*" }));
 app.use(express.json());
 
 app.use("/menu-items", menuItemRouter);
 app.use("/orders", orderRouter);
 
 app.get("/health", (_, res) => {
-  res.json({
-    status: "ok",
-  });
+  res.json({ status: "ok" });
 });
 
-const PORT = env.port;
-
-const startServer = async () => {
+// Only connect DB and start server — does NOT call listen here
+export const startServer = async (port: number = 4000) => {
   await connectDB();
-
-  app.listen(PORT, () => {
-    console.log(`Server running on ${PORT}`);
+  await seedDatabase();
+  return new Promise<void>((resolve) => {
+    app.listen(port, () => {
+      console.log(`Server running on ${port}`);
+      resolve();
+    });
   });
 };
-
-startServer();

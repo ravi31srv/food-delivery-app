@@ -18,3 +18,13 @@ export const placeOrder = async (orderData: any) => {
   await newOrder.save();
   return newOrder;
 }
+
+export const updateOrderStatus = async (id: string, status: string) => {
+  // Update order status in the database
+  const updatedOrder = await Order.findByIdAndUpdate(
+    id,
+    { status },
+    { new: true, runValidators: true }
+  );
+  return updatedOrder;
+}

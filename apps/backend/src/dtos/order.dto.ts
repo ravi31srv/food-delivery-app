@@ -48,3 +48,9 @@ items!: OrderItemDto[];
     return dto;
   }
 }
+
+export class UpdateOrderStatusDto {
+  @IsString()
+  @IsNotEmpty({ message: "status is required" })
+  status!: string;
+}

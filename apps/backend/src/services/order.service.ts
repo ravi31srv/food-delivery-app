@@ -1,7 +1,8 @@
 
 import * as orderRepo from '../repositories/orders.repository.js'
 import * as menuItemsRepo from '../repositories/menuItems.repository.js'
-import { CreateOrderDto } from '../dtos/order.dto.js';
+import { CreateOrderDto, UpdateOrderStatusDto } from '../dtos/order.dto.js';
+import { OrderStatus } from '../constants/order-status.js';
 
 export const getOrderById = async (id: string) => {
   // Implement logic to fetch a specific order from the database
@@ -55,5 +56,23 @@ export const placeOrder = async (orderData: CreateOrderDto) => {
     // const result = await orderRepo.placeOrder(orderData);
     // Implement logic to create a new order in the database
   return { message: "Place order service",data: result };
+}
+
+export const updateOrderStatus = async (id: string, statusDto: UpdateOrderStatusDto) => {
+  // Validate if status is a valid enum value
+  const validStatuses = Object.values(OrderStatus);
+  if (!validStatuses.includes(statusDto.status as any)) {
+    throw new Error(`Invalid status. Valid statuses are: ${validStatuses.join(', ')}`);
+  }
+
+  // Fetch the order to check if it exists
+  const order = await orderRepo.getOrderById(id);
+  if (!order) {
+    throw new Error('Order not found');
+  }
+
+  // Update the order status
+  const result = await orderRepo.updateOrderStatus(id, statusDto.status);
+  return { message: "Order status updated successfully", data: result };
 }
 

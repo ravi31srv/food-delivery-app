@@ -35,3 +35,31 @@ export const placeOrder = async (req: Request, res: Response) => {
     res.status(500).json({ message: 'Error placing order' });
   }
 };
+
+export const updateOrderStatus = async (req: Request, res: Response) => {
+  const { id } = req.params as { id: string };
+  const { status } = req.body as { status: string };
+
+  // Type Guard
+  if (!isValidObjectId(id)) {
+    return res.status(400).json({ message: 'Invalid ID format' });
+  }
+
+  if (!status) {
+    return res.status(400).json({ message: 'Status is required' });
+  }
+
+  try {
+    const result = await orderService.updateOrderStatus(id, { status });
+    res.json(result);
+  } catch (error: any) {
+    console.error('Error updating order status:', error);
+    if (error.message.includes('not found')) {
+      return res.status(404).json({ message: error.message });
+    }
+    if (error.message.includes('Invalid status')) {
+      return res.status(400).json({ message: error.message });
+    }
+    res.status(500).json({ message: 'Error updating order status' });
+  }
+};

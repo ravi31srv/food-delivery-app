@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { getSocket } from "@/lib/socket";
 
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL;
 
@@ -24,6 +25,28 @@ export default function OrdersListPage() {
         setLoading(false);
       })
       .catch(() => setLoading(false));
+
+    // Listen for real-time order updates
+    const socket = getSocket();
+    
+    const handleOrderUpdate = (data: any) => {
+      console.log("Order update received in list:", data);
+      setOrders((prevOrders) =>
+        prevOrders.map((order) =>
+          order._id === data.id ? { ...order, status: data.status } : order
+        )
+      );
+    };
+
+    if (socket) {
+      socket.on("order-update", handleOrderUpdate);
+    }
+
+    return () => {
+      if (socket) {
+        socket.off("order-update", handleOrderUpdate);
+      }
+    };
   }, []);
 
   return (

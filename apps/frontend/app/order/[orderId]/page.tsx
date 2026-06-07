@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
+import { joinOrderRoom, getSocket } from "@/lib/socket";
 
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL;
 
@@ -37,6 +38,28 @@ export default function OrderStatusPage() {
       .then((res) => res.json())
       .then((json) => { setOrder(json.result || json.data || json); setLoading(false); })
       .catch(() => { setError(true); setLoading(false); });
+
+    // Initialize socket and join order room
+    joinOrderRoom(String(orderId));
+    const socket = getSocket();
+    
+    const handleOrderUpdate = (data: any) => {
+      console.log("Order update received:", data);
+      setOrder((prevOrder: any) => ({
+        ...prevOrder,
+        status: data.status || prevOrder.status,
+      }));
+    };
+
+    if (socket) {
+      socket.on("order-update", handleOrderUpdate);
+    }
+
+    return () => {
+      if (socket) {
+        socket.off("order-update", handleOrderUpdate);
+      }
+    };
   }, [orderId]);
 
   const currentStep = order ? getStepIndex(order.status) : 0;

@@ -33,6 +33,18 @@ const orderSchema = new Schema(
       enum: Object.values(OrderStatus),
       default: OrderStatus.RECEIVED,
     },
+    customerName: {
+      type: String,
+      required: true,
+    },
+    customerAddress: {
+      type: String,
+      required: true,
+    },
+    customerPhone: {
+      type: String,
+      required: true,
+    },
   },
   {
     timestamps: true,

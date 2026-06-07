@@ -1,5 +1,5 @@
 import "reflect-metadata";
-import { IsString, IsNotEmpty, IsArray, ValidateNested, IsNumber, Min } from "class-validator";
+import { IsString, IsNotEmpty, IsArray, ValidateNested, IsNumber, Min, ArrayMinSize } from "class-validator";
 import { Type } from "class-transformer";
 export class OrderItemDto {
   @IsString()
@@ -24,12 +24,10 @@ export class CreateOrderDto {
   @IsNotEmpty({ message: "customerPhone is required" })
   customerPhone!: string;
 
-  // @IsArray({ message: "items must be an array" })
-  // @ValidateNested({ each: true })
-  // items!: OrderItemDto[];
 
   @IsArray()
 @ValidateNested({ each: true })
+ @ArrayMinSize(1, { message: 'The items array must contain at least 1 item.' })
 @Type(() => OrderItemDto)
 items!: OrderItemDto[];
 

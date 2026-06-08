@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { getSocket } from "@/lib/socket";
 
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL;
 
@@ -15,16 +16,43 @@ const STATUS_COLORS: Record<string, { bg: string; color: string }> = {
 export default function OrdersListPage() {
   const [orders, setOrders] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [page, setPage] = useState(1);
+  const [limit] = useState(8);
+  const [totalPages, setTotalPages] = useState(1);
 
   useEffect(() => {
-    fetch(`${BASE_URL}/orders`)
+    setLoading(true);
+    fetch(`${BASE_URL}/orders?page=${page}&limit=${limit}`)
       .then((res) => res.json())
       .then((json) => {
         setOrders(json.data || []);
+        setTotalPages(json.totalPages || 1);
         setLoading(false);
       })
       .catch(() => setLoading(false));
-  }, []);
+
+    // Listen for real-time order updates
+    const socket = getSocket();
+    
+    const handleOrderUpdate = (data: any) => {
+      console.log("Order update received in list:", data);
+      setOrders((prevOrders) =>
+        prevOrders.map((order) =>
+          order._id === data.id ? { ...order, status: data.status } : order
+        )
+      );
+    };
+
+    if (socket) {
+      socket.on("order-update", handleOrderUpdate);
+    }
+
+    return () => {
+      if (socket) {
+        socket.off("order-update", handleOrderUpdate);
+      }
+    };
+  }, [page, limit]);
 
   return (
     <div style={{ minHeight: "100vh", background: "#f9f7f4", fontFamily: "'Segoe UI', sans-serif", paddingBottom: "4rem" }}>
@@ -118,6 +146,26 @@ export default function OrdersListPage() {
                 </Link>
               );
             })}
+          </div>
+        )}
+
+        {!loading && totalPages > 1 && (
+          <div style={{ maxWidth: 800, margin: "1.5rem auto", padding: "0 1.5rem", display: "flex", justifyContent: "center", gap: 10, alignItems: "center" }}>
+            <button
+              onClick={() => setPage((prev) => Math.max(prev - 1, 1))}
+              disabled={page === 1}
+              style={{ padding: "10px 16px", borderRadius: 10, border: "1px solid #e5e7eb", background: page === 1 ? "#f3f4f6" : "#fff", cursor: page === 1 ? "not-allowed" : "pointer" }}
+            >
+              Previous
+            </button>
+            <span style={{ color: "#6b7280" }}>Page {page} of {totalPages}</span>
+            <button
+              onClick={() => setPage((prev) => Math.min(prev + 1, totalPages))}
+              disabled={page === totalPages}
+              style={{ padding: "10px 16px", borderRadius: 10, border: "1px solid #e5e7eb", background: page === totalPages ? "#f3f4f6" : "#fff", cursor: page === totalPages ? "not-allowed" : "pointer" }}
+            >
+              Next
+            </button>
           </div>
         )}
       </div>

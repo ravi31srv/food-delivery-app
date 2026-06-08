@@ -3,17 +3,28 @@ import * as orderRepo from '../repositories/orders.repository.js'
 import * as menuItemsRepo from '../repositories/menuItems.repository.js'
 import { CreateOrderDto, UpdateOrderStatusDto } from '../dtos/order.dto.js';
 import { OrderStatus } from '../constants/order-status.js';
+import { OrderRepoType } from '../types/order.types.js';
+import { Types } from 'mongoose';
 
 export const getOrderById = async (id: string) => {
-  // Implement logic to fetch a specific order from the database
   const result = await orderRepo.getOrderById(id);
   return { message: "Get order by ID service", data:result };
 }
 
-export const getOrders = async () => {
-  // Implement logic to fetch all orders from the database
-  const result = await orderRepo.getOrders();
-  return { message: "Get all orders service", data:result };
+export const getOrders = async (page: number, limit: number) => {
+  const [orders, total] = await Promise.all([
+    orderRepo.getOrders(page, limit),
+    orderRepo.countOrders(),
+  ]);
+
+  return {
+    message: "Get all orders service",
+    data: orders,
+    page,
+    limit,
+    total,
+    totalPages: Math.ceil(total / limit),
+  };
 }
 
 export const placeOrder = async (orderData: CreateOrderDto) => {
@@ -24,6 +35,8 @@ export const placeOrder = async (orderData: CreateOrderDto) => {
     // 2. ONE query to fetch all matching items from the DB
     const itemsFromDb = await menuItemsRepo.getMenuItemByIds(itemIds);
 
+    
+
     // 3. Create a Map for O(1) lookup speed
     const itemMap = new Map(itemsFromDb.map(i => [i._id.toString(), i]));
 
@@ -32,14 +45,14 @@ export const placeOrder = async (orderData: CreateOrderDto) => {
         const details = itemMap.get(item.itemId);
         
         if (!details) {
-            throw new Error(`Item ${item.itemId} not found`);
+            throw ({message: `Item ${item.itemId} not found`, statusCode: 400});
         }
 
         const subTotal = details.price * item.quantity;
         totalAmount += subTotal;
 
         return {
-            menuItemId: item.itemId,
+            menuItemId: new Types.ObjectId(item.itemId),
             unitPrice: details.price,
             quantity: item.quantity,
             subTotal
@@ -47,14 +60,12 @@ export const placeOrder = async (orderData: CreateOrderDto) => {
     });
 
     // 4. Save the order once
-    const result =   await orderRepo.placeOrder({
+    const result=   await orderRepo.placeOrder({
         ...orderData,
         items: processedItems,
         totalAmount
     });
-    // const itemsOfOrder =await menuItemsRepo.getMenuItemByIds(orderData.items.map((item: any) => item.itemId));
-    // const result = await orderRepo.placeOrder(orderData);
-    // Implement logic to create a new order in the database
+
   return { message: "Place order service",data: result };
 }
 

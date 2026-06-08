@@ -12,17 +12,27 @@ export default function MenuPage() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [toast, setToast] = useState<string | null>(null);
+  const [page, setPage] = useState(1);
+  const [limit] = useState(8);
+  const [totalPages, setTotalPages] = useState(1);
+  const [apiTotal, setApiTotal] = useState(0);
+  const [apiPage, setApiPage] = useState(1);
 
   const { addToCart, totalItems, totalPrice } = useCartStore();
 
   useEffect(() => {
-    fetch(`${BASE_URL}/menu-items`)
+    setLoading(true);
+    fetch(`${BASE_URL}/menu-items?page=${page}&limit=${limit}`)
       .then((res) => res.json())
       .then((json) => {
-        setItems(json.data);
+        setItems(json.data || []);
+        setTotalPages(json.totalPages || 1);
+        setApiTotal(json.total || 0);
+        setApiPage(json.page || page);
         setLoading(false);
-      });
-  }, []);
+      })
+      .catch(() => setLoading(false));
+  }, [page, limit]);
 
   const filtered = items.filter(
     (item) =>
@@ -119,7 +129,7 @@ export default function MenuPage() {
       {/* Result count */}
       {!loading && (
         <p style={{ maxWidth: 1100, margin: "0 auto 1rem", padding: "0 1.5rem", fontSize: 13, color: "#9ca3af" }}>
-          {filtered.length} item{filtered.length !== 1 ? "s" : ""} available
+          Showing {filtered.length} item{filtered.length !== 1 ? "s" : ""} on page {apiPage} of {totalPages} • total {apiTotal} item{apiTotal !== 1 ? "s" : ""}
         </p>
       )}
 
@@ -181,6 +191,26 @@ export default function MenuPage() {
               😕 No items match "{search}"
             </div>
           )}
+        </div>
+      )}
+
+      {!loading && totalPages > 1 && (
+        <div style={{ maxWidth: 1100, margin: "1.5rem auto", padding: "0 1.5rem", display: "flex", justifyContent: "center", gap: 10, alignItems: "center" }}>
+          <button
+            onClick={() => setPage((prev) => Math.max(prev - 1, 1))}
+            disabled={page === 1}
+            style={{ padding: "10px 16px", borderRadius: 10, border: "1px solid #e5e7eb", background: page === 1 ? "#f3f4f6" : "#fff", cursor: page === 1 ? "not-allowed" : "pointer" }}
+          >
+            Previous
+          </button>
+          <span style={{ color: "#6b7280" }}>Page {page} of {totalPages}</span>
+          <button
+            onClick={() => setPage((prev) => Math.min(prev + 1, totalPages))}
+            disabled={page === totalPages}
+            style={{ padding: "10px 16px", borderRadius: 10, border: "1px solid #e5e7eb", background: page === totalPages ? "#f3f4f6" : "#fff", cursor: page === totalPages ? "not-allowed" : "pointer" }}
+          >
+            Next
+          </button>
         </div>
       )}
     </div>

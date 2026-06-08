@@ -1,8 +1,36 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Image from "next/image";
 import { useParams } from "next/navigation";
 import Link from "next/link";
+import { joinOrderRoom, getSocket } from "@/lib/socket";
+
+type PopulatedMenuItem = {
+  _id: string;
+  name: string;
+  price: number;
+  imageUrl?: string;
+};
+
+type OrderItem = {
+  _id?: string;
+  menuItemId: PopulatedMenuItem | string;
+  quantity: number;
+  unitPrice: number;
+};
+
+type OrderData = {
+  _id: string;
+  status: string;
+  customerName?: string;
+  customerAddress?: string;
+  customerPhone?: string;
+  items: OrderItem[];
+  totalAmount: number;
+  createdAt?: string;
+  updatedAt?: string;
+};
 
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL;
 
@@ -27,7 +55,7 @@ function getStepIndex(status: string) {
 
 export default function OrderStatusPage() {
   const { orderId } = useParams();
-  const [order, setOrder] = useState<any>(null);
+  const [order, setOrder] = useState<OrderData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
 
@@ -37,6 +65,28 @@ export default function OrderStatusPage() {
       .then((res) => res.json())
       .then((json) => { setOrder(json.result || json.data || json); setLoading(false); })
       .catch(() => { setError(true); setLoading(false); });
+
+    // Initialize socket and join order room
+    joinOrderRoom(String(orderId));
+    const socket = getSocket();
+    
+    const handleOrderUpdate = (data: { id: string; status: string }) => {
+      console.log("Order update received:", data);
+      setOrder((prevOrder) => prevOrder ? {
+        ...prevOrder,
+        status: data.status || prevOrder.status,
+      } : prevOrder);
+    };
+
+    if (socket) {
+      socket.on("order-update", handleOrderUpdate);
+    }
+
+    return () => {
+      if (socket) {
+        socket.off("order-update", handleOrderUpdate);
+      }
+    };
   }, [orderId]);
 
   const currentStep = order ? getStepIndex(order.status) : 0;
@@ -143,13 +193,36 @@ export default function OrderStatusPage() {
         {order.items && (
           <div style={cardStyle}>
             <h3 style={{ fontSize: 16, fontWeight: 700, margin: "0 0 1.25rem", color: "#111" }}>Items Ordered</h3>
-            {order.items.map((entry: any, i: number) => (
-              <div key={entry._id || i} style={{ display: "flex", alignItems: "center", padding: "8px 0", borderBottom: "1px solid #f5f5f5", fontSize: 14, gap: 8 }}>
-                <span style={{ flex: 1, color: "#111", fontWeight: 500 }}>Item {i + 1}</span>
-                <span style={{ color: "#9ca3af" }}>× {entry.quantity}</span>
-                <span style={{ fontWeight: 600, color: "#374151", minWidth: 64, textAlign: "right" }}>₹{(entry.unitPrice * entry.quantity).toFixed(2)}</span>
-              </div>
-            ))}
+            {order.items.map((entry: OrderItem, i: number) => {
+              const itemData = typeof entry.menuItemId === "object" && entry.menuItemId !== null
+                ? entry.menuItemId
+                : { name: `Item ${i + 1}`, imageUrl: undefined };
+
+              return (
+                <div key={entry._id || i} style={{ display: "flex", alignItems: "center", padding: "12px 10px", borderBottom: "1px solid #f5f5f5", fontSize: 14, gap: 12 }}>
+                  {itemData.imageUrl && (
+                    <Image
+                      src={itemData.imageUrl}
+                      alt={itemData.name}
+                      width={70}
+                      height={70}
+                      unoptimized
+                      style={{ borderRadius: 16, flexShrink: 0, background: "#f3f4f6" }}
+                    />
+                  )}
+
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 15, fontWeight: 700, color: "#111", marginBottom: 4 }}>{itemData.name}</div>
+                    <div style={{ display: "flex", gap: 8, flexWrap: "wrap", color: "#6b7280", fontSize: 13 }}>
+                      <span>Qty {entry.quantity}</span>
+                      <span>₹{entry.unitPrice.toFixed(2)} each</span>
+                    </div>
+                  </div>
+
+                  <span style={{ fontWeight: 700, color: "#374151", minWidth: 80, textAlign: "right" }}>₹{(entry.unitPrice * entry.quantity).toFixed(2)}</span>
+                </div>
+              );
+            })}
             <div style={{ display: "flex", justifyContent: "space-between", padding: "12px 0 0", marginTop: 8, borderTop: "1px solid #e5e7eb", fontSize: 15, fontWeight: 700 }}>
               <span>Total Paid</span>
               <span style={{ color: "#e55b2d" }}>₹{order.totalAmount?.toFixed(2)}</span>

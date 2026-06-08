@@ -1,20 +1,28 @@
+import { IMenuItem } from "../types/menuItems.types.js";
 import { MenuItem } from "../models/menuItem.js";
 
-export const getMenuItems = async () => {
-  // Implement logic to fetch menu items from the database
- const menuItems = await MenuItem.find({isAvailable:true});
- return menuItems;
+export const getMenuItems = async (page: number, limit: number)  : Promise<IMenuItem[]> => {
+  const filter = { isAvailable: true };
+  const menuItems: IMenuItem[] = await MenuItem.find(filter)
+    .sort({ createdAt: -1 })
+    .skip((page - 1) * limit)
+    .limit(limit)
+    .lean();
+  return menuItems;
 }
 
-export const getMenuItemByIds = async (ids: string[]) => {
-  // Implement logic to fetch specific menu items from the database
-  const menuItems = await MenuItem.find({ _id: { $in: ids } });
+export const countMenuItems = async () => {
+  return MenuItem.countDocuments({ isAvailable: true });
+}
+
+export const getMenuItemByIds = async (ids: string[]): Promise<IMenuItem[]> => {
+  const menuItems : IMenuItem[] = await MenuItem.find({ _id: { $in: ids } }).select("_id name price description imageUrl isAvailable createdAt updatedAt").lean();
   return menuItems;
 }
 
 export const addMenuItem = async (menuItemData: any) => {
-  // Implement logic to add a new menu item to the database
-  const newMenuItem = new MenuItem(menuItemData); 
+  const newMenuItem= new MenuItem(menuItemData); 
   await newMenuItem.save();
+
   return newMenuItem;
 }

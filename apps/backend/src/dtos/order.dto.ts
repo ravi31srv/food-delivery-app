@@ -4,7 +4,7 @@ import { Type } from "class-transformer";
 export class OrderItemDto {
   @IsString()
   @IsNotEmpty({ message: "itemId is required" })
-  itemId!: string;
+  itemId!: string  ;
 
   @IsNumber()
   @Min(1, { message: "quantity must be at least 1" })

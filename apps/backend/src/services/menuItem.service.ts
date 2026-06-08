@@ -9,8 +9,18 @@ export const addMenuItem = async (req: Request, res: Response)  : Promise<ApiRes
   return { message: "Menu item added", data: menuItem };
 };
 
-export const getMenuItems = async (req: Request, res: Response) : Promise<ApiResponse<IMenuItem[]>> => {
-  // Logic to fetch menu items from the database
-  const menuItems = await menuItemsRepo.getMenuItems();
-  return { message: "Get menu items", data: menuItems };
+export const getMenuItems = async ({ page, limit }: { page: number; limit: number; }) => {
+  const [menuItems, total] = await Promise.all([
+    menuItemsRepo.getMenuItems(page, limit),
+    menuItemsRepo.countMenuItems(),
+  ]);
+
+  return {
+    message: "Get menu items",
+    data: menuItems,
+    page,
+    limit,
+    total,
+    totalPages: Math.ceil(total / limit),
+  };
 }

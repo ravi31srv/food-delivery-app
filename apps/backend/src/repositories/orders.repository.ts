@@ -7,9 +7,19 @@ export const getOrderById = async (id: string) => {
  return order;
 }
 
-export const getOrders = async () => {
-  const orders = await Order.find().select('_id status customerName customerAddress customerPhone items totalAmount status').populate('items.menuItemId', 'name price imageUrl').sort({ createdAt: -1 }).lean();
+export const getOrders = async (page: number, limit: number) => {
+  const orders = await Order.find()
+    .select('_id status customerName customerAddress customerPhone items totalAmount')
+    .populate('items.menuItemId', 'name price imageUrl')
+    .sort({ createdAt: -1 })
+    .skip((page - 1) * limit)
+    .limit(limit)
+    .lean();
   return orders;
+}
+
+export const countOrders = async () => {
+  return Order.countDocuments();
 }
 
 export const placeOrder = async (orderData: OrderRepoType 

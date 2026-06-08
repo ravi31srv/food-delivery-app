@@ -20,7 +20,10 @@ export const getOrderById = async (req: Request, res: Response) => {
 
 export const getOrders = async (req: Request, res: Response) => {
   try {
-    const result = await orderService.getOrders();    
+    const page = Math.max(Number(req.query.page) || 1, 1);
+    const limit = Math.min(Math.max(Number(req.query.limit) || 10, 1), 100);
+    const result = await orderService.getOrders(page, limit);
+ 
     res.json(result);
   } catch (error) {
     res.status(500).json({ message: 'Error fetching orders' });

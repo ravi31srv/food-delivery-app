@@ -1,5 +1,5 @@
 import "reflect-metadata";
-import { IsString, IsNotEmpty, IsArray, ValidateNested, IsNumber, Min, ArrayMinSize } from "class-validator";
+import { IsString, IsNotEmpty, IsArray, ValidateNested, IsNumber, Min, ArrayMinSize, isMobilePhone, IsMobilePhone } from "class-validator";
 import { Type } from "class-transformer";
 export class OrderItemDto {
   @IsString()
@@ -21,6 +21,7 @@ export class CreateOrderDto {
   customerAddress!: string;
 
   @IsString()
+  @IsMobilePhone("en-IN",undefined ,{message: "customerPhone must be a valid Indian mobile number"})
   @IsNotEmpty({ message: "customerPhone is required" })
   customerPhone!: string;
 

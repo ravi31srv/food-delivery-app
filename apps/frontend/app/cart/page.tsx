@@ -13,6 +13,7 @@ export default function CartPage() {
 
   const [details, setDetails] = useState({ name: "", address: "", phone: "" });
   const [errors, setErrors] = useState<{ name?: string; address?: string; phone?: string }>({});
+  const [serverError, setServerError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
   const validate = () => {
@@ -20,7 +21,7 @@ export default function CartPage() {
     if (!details.name.trim()) e.name = "Name is required";
     if (!details.address.trim()) e.address = "Address is required";
     if (!details.phone.trim()) e.phone = "Phone is required";
-    else if (!/^\d{10}$/.test(details.phone.trim())) e.phone = "Enter a valid 10-digit number";
+    else if (!/^[6-9]\d{9}$/.test(details.phone.trim())) e.phone = "Enter a valid Indian mobile number";
     setErrors(e);
     return Object.keys(e).length === 0;
   };
@@ -28,6 +29,7 @@ export default function CartPage() {
   const handleCheckout = async () => {
     if (!validate()) return;
     setSubmitting(true);
+    setServerError(null);
     try {
       const payload = {
         customerName: details.name,
@@ -41,11 +43,34 @@ export default function CartPage() {
         body: JSON.stringify(payload),
       });
       const json = await res.json();
+
+      if (!res.ok) {
+        // Handle validation errors returned from backend
+        if (json && Array.isArray(json.errors)) {
+          const fieldErrors: typeof errors = {};
+          for (const e of json.errors) {
+            // backend uses fields like customerName/customerAddress/customerPhone
+            if (e.field && e.messages) {
+              if (e.field.includes('customerName')) fieldErrors.name = e.messages;
+              else if (e.field.includes('customerAddress')) fieldErrors.address = e.messages;
+              else if (e.field.includes('customerPhone')) fieldErrors.phone = e.messages;
+              else setServerError((prev) => prev ? prev + ' | ' + e.messages : e.messages);
+            }
+          }
+          setErrors((prev) => ({ ...prev, ...fieldErrors }));
+        } else {
+          setServerError(json?.message || 'Order failed. Please try again.');
+        }
+        setSubmitting(false);
+        return;
+      }
+
       const orderId = json.data?._id || json._id;
       clearCart();
       router.push(`/orders/`);
     } catch (err) {
       console.error("Checkout failed", err);
+      setServerError('Unable to place order. Please try again.');
       setSubmitting(false);
     }
   };
@@ -129,19 +154,19 @@ export default function CartPage() {
 
           <div style={{ marginBottom: "1rem" }}>
             <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: "#374151", marginBottom: 6 }}>Full Name</label>
-            <input style={errors.name ? s.inputError : s.input} type="text" placeholder="Ravi Solanki" value={details.name} onChange={(e) => setDetails({ ...details, name: e.target.value })} />
+            <input style={errors.name ? s.inputError : s.input} type="text" placeholder="Ravi Solanki" value={details.name} onChange={(e) => { setDetails({ ...details, name: e.target.value }); setErrors({ ...errors, name: undefined }); }} />
             {errors.name && <p style={{ fontSize: 12, color: "#ef4444", margin: "4px 0 0" }}>{errors.name}</p>}
           </div>
 
           <div style={{ marginBottom: "1rem" }}>
             <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: "#374151", marginBottom: 6 }}>Delivery Address</label>
-            <textarea style={{ ...s.input, resize: "vertical", minHeight: 80 }} placeholder="123, MG Road, Ahmedabad" value={details.address} onChange={(e) => setDetails({ ...details, address: e.target.value })} />
+            <textarea style={{ ...s.input, resize: "vertical", minHeight: 80 }} placeholder="123, MG Road, Ahmedabad" value={details.address} onChange={(e) => { setDetails({ ...details, address: e.target.value }); setErrors({ ...errors, address: undefined }); }} />
             {errors.address && <p style={{ fontSize: 12, color: "#ef4444", margin: "4px 0 0" }}>{errors.address}</p>}
           </div>
 
           <div style={{ marginBottom: "1rem" }}>
             <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: "#374151", marginBottom: 6 }}>Phone Number</label>
-            <input style={errors.phone ? s.inputError : s.input} type="tel" placeholder="9876543210" maxLength={10} value={details.phone} onChange={(e) => setDetails({ ...details, phone: e.target.value })} />
+            <input style={errors.phone ? s.inputError : s.input} type="tel" placeholder="9876543210" maxLength={10} value={details.phone} onChange={(e) => { setDetails({ ...details, phone: e.target.value }); setErrors({ ...errors, phone: undefined }); }} />
             {errors.phone && <p style={{ fontSize: 12, color: "#ef4444", margin: "4px 0 0" }}>{errors.phone}</p>}
           </div>
 
@@ -169,6 +194,7 @@ export default function CartPage() {
           >
             {submitting ? "Placing Order..." : "Place Order →"}
           </button>
+          {serverError && <p style={{ color: '#ef4444', marginTop: 8, fontSize: 13 }}>{serverError}</p>}
         </section>
       </div>
     </div>
